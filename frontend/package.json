@@ -1,0 +1,13 @@
+{
+  "name": "potager-frontend",
+  "version": "1.0.0",
+  "description": "Frontend TypeScript pour l'application de gestion de potager",
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc --watch",
+    "dev": "npx serve public"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.5"
+  }
+}

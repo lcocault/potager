@@ -1,0 +1,20 @@
+# PHP dependencies
+backend/vendor/
+
+# Node.js dependencies
+frontend/node_modules/
+
+# TypeScript source maps (optional - comment out to include)
+# frontend/public/js/*.map
+
+# Local config overrides
+backend/config/database.local.php
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
