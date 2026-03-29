@@ -1,5 +1,5 @@
 {
-    "name": "potager-backend",
+    "name": "lcocault/potager-backend",
     "description": "Backend PHP pour l'application de gestion de potager",
     "require": {
         "php": ">=8.1",
