@@ -16,9 +16,19 @@ class Request
     public function __construct()
     {
         $this->method      = strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET');
-        $this->path        = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
+        $rawPath           = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
+        $this->path        = $this->stripBasePath($rawPath, $_SERVER['SCRIPT_NAME'] ?? '');
         $this->queryParams = $_GET;
         $this->body        = $this->parseBody();
+    }
+
+    private function stripBasePath(string $rawPath, string $scriptName): string
+    {
+        $scriptDir = rtrim(dirname($scriptName), '/\\');
+        if ($scriptDir === '' || !str_starts_with($rawPath, $scriptDir)) {
+            return $rawPath;
+        }
+        return substr($rawPath, strlen($scriptDir)) ?: '/';
     }
 
     /** @return array<string,mixed> */
