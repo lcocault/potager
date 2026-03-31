@@ -91,6 +91,9 @@ $router->post('/api/grid', function (Request $req) {
 $router->put('/api/grid/{id}', function (Request $req, array $p) {
     (new GridController())->update($req, $p);
 });
+$router->delete('/api/grid/{id}', function (Request $req, array $p) {
+    (new GridController())->destroy($req, $p);
+});
 $router->delete('/api/grid/{id}/cells', function (Request $req, array $p) {
     (new GridController())->clearCells($req, $p);
 });

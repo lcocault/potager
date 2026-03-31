@@ -27,6 +27,7 @@ export async function initGrid(container) {
         <button id="btn-new-layout" class="btn btn-secondary">+ Nouveau plan</button>
         <button id="btn-save-grid" class="btn btn-primary">💾 Enregistrer</button>
         <button id="btn-clear-grid" class="btn btn-danger">🗑️ Réinitialiser</button>
+        <button id="btn-delete-layout" class="btn btn-danger">🗑️ Supprimer le plan</button>
       </div>
     </div>
     <div class="grid-workspace">
@@ -62,10 +63,30 @@ function renderLegend() {
 async function loadLayouts() {
     const layouts = await gridApi.list();
     const sel = document.getElementById('layout-select');
-    sel.innerHTML = layouts.map((l) => `<option value="${l.id}">${escHtml(l.name)}</option>`).join('');
+    sel.innerHTML = layouts.length > 0
+        ? layouts.map((l) => `<option value="${l.id}">${escHtml(l.name)}</option>`).join('')
+        : '<option value="">Aucun plan</option>';
     if (layouts.length > 0) {
         await loadLayout(layouts[0].id);
     }
+    else {
+        state.layout = null;
+        state.cells = new Map();
+        const canvas = document.getElementById('grid-canvas');
+        if (canvas) {
+            const ctx = canvas.getContext('2d');
+            ctx?.clearRect(0, 0, canvas.width, canvas.height);
+        }
+        setLayoutActionsEnabled(false);
+    }
+}
+function setLayoutActionsEnabled(enabled) {
+    const ids = ['btn-save-grid', 'btn-clear-grid', 'btn-delete-layout'];
+    ids.forEach((id) => {
+        const btn = document.getElementById(id);
+        if (btn)
+            btn.disabled = !enabled;
+    });
 }
 async function loadLayout(id) {
     const layout = await gridApi.get(id);
@@ -75,6 +96,7 @@ async function loadLayout(id) {
     (layout.cells ?? []).forEach((c) => {
         state.cells.set(`${c.col},${c.row}`, c);
     });
+    setLayoutActionsEnabled(true);
     renderGrid();
     setStatus(`Plan chargé : ${layout.name} (${layout.cols}×${layout.rows})`);
 }
@@ -199,10 +221,28 @@ async function createNewLayout() {
         alert('Erreur : ' + err.message);
     }
 }
+async function deleteLayout() {
+    if (!state.layout)
+        return;
+    if (!confirm(`Supprimer le plan « ${state.layout.name} » ? Cette action est irréversible.`))
+        return;
+    try {
+        await gridApi.delete(state.layout.id);
+        state.layout = null;
+        state.cells.clear();
+        state.isDirty = false;
+        await loadLayouts();
+        setStatus('Plan supprimé.');
+    }
+    catch (err) {
+        alert('Erreur : ' + err.message);
+    }
+}
 function bindGridEvents(container) {
     container.querySelector('#btn-save-grid')?.addEventListener('click', saveGrid);
     container.querySelector('#btn-clear-grid')?.addEventListener('click', clearGrid);
     container.querySelector('#btn-new-layout')?.addEventListener('click', createNewLayout);
+    container.querySelector('#btn-delete-layout')?.addEventListener('click', deleteLayout);
     container.querySelector('#layout-select')?.addEventListener('change', async (e) => {
         if (state.isDirty && !confirm('Quitter sans enregistrer ?'))
             return;

@@ -56,6 +56,7 @@ export const gridApi = {
     get: (id) => request(`${API_BASE}/grid/${id}`),
     create: (data) => request(`${API_BASE}/grid`, { method: 'POST', body: JSON.stringify(data) }),
     save: (id, data) => request(`${API_BASE}/grid/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    delete: (id) => request(`${API_BASE}/grid/${id}`, { method: 'DELETE' }),
     clearCells: (id) => request(`${API_BASE}/grid/${id}/cells`, { method: 'DELETE' }),
     getCrops: (id, date) => request(`${API_BASE}/grid/${id}/crops?date=${date}`),
 };

@@ -156,6 +156,8 @@ export const gridApi = {
     request<GridLayout>(`${API_BASE}/grid`, { method: 'POST', body: JSON.stringify(data) }),
   save: (id: number, data: Partial<Omit<GridLayout, 'cells'>> & { cells?: Partial<GridCell>[] }) =>
     request<GridLayout>(`${API_BASE}/grid/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  delete: (id: number) =>
+    request<{ success: boolean }>(`${API_BASE}/grid/${id}`, { method: 'DELETE' }),
   clearCells: (id: number) =>
     request<{ success: boolean }>(`${API_BASE}/grid/${id}/cells`, { method: 'DELETE' }),
   getCrops: (id: number, date: string) =>
