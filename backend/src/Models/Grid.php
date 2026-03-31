@@ -104,6 +104,25 @@ class Grid
         $stmt->execute(['lid' => $layoutId]);
     }
 
+    /** Check if any crop instances are assigned to cells of this layout */
+    public function hasCropAssignments(int $layoutId): bool
+    {
+        $stmt = $this->db->prepare(
+            'SELECT COUNT(*) FROM crop_cell_assignments cca
+             JOIN grid_cells gc ON cca.cell_id = gc.id
+             WHERE gc.layout_id = :lid'
+        );
+        $stmt->execute(['lid' => $layoutId]);
+        return (int) $stmt->fetchColumn() > 0;
+    }
+
+    /** Delete a layout and its cells (CASCADE) */
+    public function deleteLayout(int $id): bool
+    {
+        $stmt = $this->db->prepare('DELETE FROM grid_layout WHERE id = :id');
+        return $stmt->execute(['id' => $id]);
+    }
+
     /** Get cells with active crop instances on a given date */
     public function getCellsWithCrops(int $layoutId, string $date): array
     {

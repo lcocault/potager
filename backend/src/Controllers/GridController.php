@@ -77,6 +77,20 @@ class GridController
         Response::json(['success' => true]);
     }
 
+    /** DELETE /api/grid/{id} */
+    public function destroy(Request $request, array $params): never
+    {
+        $id = (int) $params['id'];
+        if ($this->model->findLayoutById($id) === null) {
+            Response::notFound('Grid layout not found');
+        }
+        if ($this->model->hasCropAssignments($id)) {
+            Response::error('Impossible de supprimer un plan auquel des cultures sont associées.', 409);
+        }
+        $this->model->deleteLayout($id);
+        Response::json(['success' => true]);
+    }
+
     /** GET /api/grid/{id}/crops?date=YYYY-MM-DD */
     public function getCrops(Request $request, array $params): never
     {
