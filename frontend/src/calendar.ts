@@ -117,15 +117,20 @@ function dateToYearPos(d: Date): number {
   return (dayOfYear / daysInYear) * 100;
 }
 
+/** Convert a MM-DD string to a Date using a non-leap reference year */
+function mmDdToDate(mmdd: string): Date {
+  return new Date(`2001-${mmdd}`);
+}
+
 function buildBars(p: CropPath): string {
   const bars: string[] = [];
 
-  const addBar = (dateStr: string | null, label: string, cssClass: string) => {
-    if (!dateStr) return;
-    const d   = new Date(dateStr);
+  const addBar = (mmdd: string | null, label: string, cssClass: string) => {
+    if (!mmdd) return;
+    const d   = mmDdToDate(mmdd);
     const pos = dateToYearPos(d);
     bars.push(
-      `<div class="timeline-bar ${cssClass}" style="left:${pos.toFixed(2)}%" title="${label}: ${dateStr}">
+      `<div class="timeline-bar ${cssClass}" style="left:${pos.toFixed(2)}%" title="${label}: ${formatMmDd(mmdd)}">
          <span class="bar-label">${label}</span>
        </div>`
     );
@@ -133,8 +138,8 @@ function buildBars(p: CropPath): string {
 
   // Draw a range bar if sowing→harvest
   if (p.sowing_date && p.harvest_date) {
-    const s   = new Date(p.sowing_date);
-    const e   = new Date(p.harvest_date);
+    const s   = mmDdToDate(p.sowing_date);
+    const e   = mmDdToDate(p.harvest_date);
     const pos = dateToYearPos(s);
     const end = dateToYearPos(e);
     const w   = end - pos;
@@ -151,6 +156,12 @@ function buildBars(p: CropPath): string {
   addBar(p.harvest_date,    'Récolte',    'bar-harvest');
 
   return bars.join('');
+}
+
+/** Format a MM-DD string for human display (e.g. "03-15" → "15 mars") */
+function formatMmDd(mmdd: string): string {
+  const d = mmDdToDate(mmdd);
+  return d.toLocaleDateString('fr-FR', { month: 'short', day: 'numeric' });
 }
 
 function openAddModal(): void {
@@ -174,10 +185,17 @@ function openModal(path: CropPath | null): void {
     .map(([v, l]) => `<option value="${v}" ${path?.sowing_condition === v ? 'selected' : ''}>${l}</option>`)
     .join('');
 
+  /** Convert a stored MM-DD value to YYYY-MM-DD for use with <input type="date"> */
+  const toInputDate = (mmdd: string | null | undefined): string => {
+    if (!mmdd) return '';
+    return `2001-${mmdd}`;
+  };
+
   modal.innerHTML = `
     <div class="modal-overlay">
       <div class="modal-box">
         <h3>${path ? 'Modifier' : 'Ajouter'} un itinéraire</h3>
+        <p class="form-hint">Les dates d'un itinéraire sont sans année (mois et jour uniquement).</p>
         <form id="path-form">
           <label>Espèce *
             <select name="species_id" required>${speciesOptions}</select>
@@ -185,20 +203,20 @@ function openModal(path: CropPath | null): void {
           <label>Nom *
             <input name="name" type="text" value="${escHtml(path?.name ?? '')}" required>
           </label>
-          <label>Date de semis
-            <input name="sowing_date" type="date" value="${path?.sowing_date ?? ''}">
+          <label>Date de semis <small>(l'année est ignorée)</small>
+            <input name="sowing_date" type="date" value="${toInputDate(path?.sowing_date)}">
           </label>
           <label>Condition de semis
             <select name="sowing_condition">${conditionOptions}</select>
           </label>
-          <label>Date de repiquage
-            <input name="transplant_date" type="date" value="${path?.transplant_date ?? ''}">
+          <label>Date de repiquage <small>(l'année est ignorée)</small>
+            <input name="transplant_date" type="date" value="${toInputDate(path?.transplant_date)}">
           </label>
-          <label>Date de mise en terre
-            <input name="planting_date" type="date" value="${path?.planting_date ?? ''}">
+          <label>Date de mise en terre <small>(l'année est ignorée)</small>
+            <input name="planting_date" type="date" value="${toInputDate(path?.planting_date)}">
           </label>
-          <label>Date de récolte
-            <input name="harvest_date" type="date" value="${path?.harvest_date ?? ''}">
+          <label>Date de récolte <small>(l'année est ignorée)</small>
+            <input name="harvest_date" type="date" value="${toInputDate(path?.harvest_date)}">
           </label>
           <label>Notes
             <textarea name="notes">${escHtml(path?.notes ?? '')}</textarea>
@@ -214,12 +232,22 @@ function openModal(path: CropPath | null): void {
 
   document.getElementById('btn-modal-cancel')!.addEventListener('click', closeModal);
 
+  const dateFields = new Set(['sowing_date', 'transplant_date', 'planting_date', 'harvest_date']);
+
   const form = document.getElementById('path-form') as HTMLFormElement;
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     const fd   = new FormData(form);
     const data: Record<string, string | null> = {};
-    fd.forEach((v, k) => { data[k] = v.toString() || null; });
+    fd.forEach((v, k) => {
+      const str = v.toString();
+      if (dateFields.has(k) && str) {
+        // Strip the year: "2001-03-15" → "03-15"
+        data[k] = str.substring(5) || null;
+      } else {
+        data[k] = str || null;
+      }
+    });
 
     try {
       if (path) {

@@ -22,7 +22,8 @@ class CropInstance
         if ($status !== null) {
             $stmt = $this->db->prepare(
                 'SELECT ci.*,
-                        cp.name AS path_name, cp.sowing_date, cp.harvest_date,
+                        cp.name AS path_name,
+                        cp.sowing_date, cp.transplant_date, cp.planting_date, cp.harvest_date,
                         s.name AS species_name, s.icon AS species_icon
                  FROM crop_instances ci
                  JOIN crop_paths cp ON cp.id = ci.crop_path_id
@@ -34,7 +35,8 @@ class CropInstance
         } else {
             $stmt = $this->db->query(
                 'SELECT ci.*,
-                        cp.name AS path_name, cp.sowing_date, cp.harvest_date,
+                        cp.name AS path_name,
+                        cp.sowing_date, cp.transplant_date, cp.planting_date, cp.harvest_date,
                         s.name AS species_name, s.icon AS species_icon
                  FROM crop_instances ci
                  JOIN crop_paths cp ON cp.id = ci.crop_path_id
@@ -50,7 +52,8 @@ class CropInstance
     {
         $stmt = $this->db->prepare(
             'SELECT ci.*,
-                    cp.name AS path_name, cp.sowing_date, cp.harvest_date,
+                    cp.name AS path_name,
+                    cp.sowing_date, cp.transplant_date, cp.planting_date, cp.harvest_date,
                     s.name AS species_name, s.icon AS species_icon
              FROM crop_instances ci
              JOIN crop_paths cp ON cp.id = ci.crop_path_id
@@ -80,14 +83,15 @@ class CropInstance
     {
         $stmt = $this->db->prepare(
             'INSERT INTO crop_instances
-                (crop_path_id, status, real_sowing_date, real_transplant_date, real_planting_date, real_harvest_date, notes)
+                (crop_path_id, status, start_date, real_sowing_date, real_transplant_date, real_planting_date, real_harvest_date, notes)
              VALUES
-                (:crop_path_id, :status, :real_sowing_date, :real_transplant_date, :real_planting_date, :real_harvest_date, :notes)
+                (:crop_path_id, :status, :start_date, :real_sowing_date, :real_transplant_date, :real_planting_date, :real_harvest_date, :notes)
              RETURNING id'
         );
         $stmt->execute([
             'crop_path_id'         => $data['crop_path_id'],
             'status'               => $data['status'] ?? 'planifie',
+            'start_date'           => $data['start_date'] ?? null,
             'real_sowing_date'     => $data['real_sowing_date'] ?? null,
             'real_transplant_date' => $data['real_transplant_date'] ?? null,
             'real_planting_date'   => $data['real_planting_date'] ?? null,
@@ -102,7 +106,8 @@ class CropInstance
     {
         $stmt = $this->db->prepare(
             'UPDATE crop_instances SET
-                status=:status, real_sowing_date=:real_sowing_date,
+                status=:status, start_date=:start_date,
+                real_sowing_date=:real_sowing_date,
                 real_transplant_date=:real_transplant_date, real_planting_date=:real_planting_date,
                 real_harvest_date=:real_harvest_date, notes=:notes
              WHERE id=:id'
@@ -110,6 +115,7 @@ class CropInstance
         return $stmt->execute([
             'id'                   => $id,
             'status'               => $data['status'] ?? 'planifie',
+            'start_date'           => $data['start_date'] ?? null,
             'real_sowing_date'     => $data['real_sowing_date'] ?? null,
             'real_transplant_date' => $data['real_transplant_date'] ?? null,
             'real_planting_date'   => $data['real_planting_date'] ?? null,
@@ -145,7 +151,9 @@ class CropInstance
     {
         $stmt = $this->db->prepare(
             'SELECT ci.*,
-                    cp.name AS path_name, s.name AS species_name, s.icon AS species_icon
+                    cp.name AS path_name,
+                    cp.sowing_date, cp.transplant_date, cp.planting_date, cp.harvest_date,
+                    s.name AS species_name, s.icon AS species_icon
              FROM crop_instances ci
              JOIN crop_paths cp ON cp.id = ci.crop_path_id
              JOIN species s ON s.id = cp.species_id

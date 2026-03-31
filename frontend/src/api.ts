@@ -41,10 +41,17 @@ export interface CropInstance {
   species_name: string;
   species_icon: string | null;
   status: CropStatus;
+  /** Actual start date used to calculate real dates from the itinerary */
+  start_date: string | null;
   real_sowing_date: string | null;
   real_transplant_date: string | null;
   real_planting_date: string | null;
   real_harvest_date: string | null;
+  /** Theoretical dates from the linked crop path (MM-DD format) */
+  sowing_date: string | null;
+  transplant_date: string | null;
+  planting_date: string | null;
+  harvest_date: string | null;
   notes: string | null;
   cells?: GridCell[];
 }

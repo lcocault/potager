@@ -106,5 +106,10 @@ class CropPathsController
         if (!empty($data['sowing_condition']) && !in_array($data['sowing_condition'], $validConditions, true)) {
             Response::error('Invalid sowing_condition value');
         }
+        foreach (['sowing_date', 'transplant_date', 'planting_date', 'harvest_date'] as $field) {
+            if (!empty($data[$field]) && !preg_match('/^\d{2}-\d{2}$/', $data[$field])) {
+                Response::error("Field \"$field\" must be in MM-DD format (e.g. 03-15)");
+            }
+        }
     }
 }

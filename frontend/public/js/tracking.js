@@ -73,10 +73,10 @@ function renderInstances() {
         <span class="status-badge" style="background:${STATUS_COLORS[inst.status]}">${STATUS_LABELS[inst.status]}</span>
       </div>
       <div class="instance-dates">
-        ${inst.real_sowing_date ? `<span>🌱 Semis: ${inst.real_sowing_date}</span>` : ''}
-        ${inst.real_transplant_date ? `<span>🔄 Repiquage: ${inst.real_transplant_date}</span>` : ''}
-        ${inst.real_planting_date ? `<span>⬇️ Plantation: ${inst.real_planting_date}</span>` : ''}
-        ${inst.real_harvest_date ? `<span>🌾 Récolte: ${inst.real_harvest_date}</span>` : ''}
+        ${renderDateRow('🌱', 'Semis', inst.real_sowing_date, inst.sowing_date)}
+        ${renderDateRow('🔄', 'Repiquage', inst.real_transplant_date, inst.transplant_date)}
+        ${renderDateRow('⬇️', 'Plantation', inst.real_planting_date, inst.planting_date)}
+        ${renderDateRow('🌾', 'Récolte', inst.real_harvest_date, inst.harvest_date)}
       </div>
       <div class="instance-actions">
         <button class="btn-icon btn-edit-instance" data-id="${inst.id}" title="Modifier">✏️</button>
@@ -90,6 +90,29 @@ function renderInstances() {
     list.querySelectorAll('.btn-delete-instance').forEach((btn) => {
         btn.addEventListener('click', () => deleteInstance(Number(btn.dataset.id)));
     });
+}
+/**
+ * Render a single date row showing the real date and the theoretical MM-DD alongside.
+ * If the real date differs from what the itinerary predicted, both are shown.
+ */
+function renderDateRow(icon, label, realDate, theoreticalMmDd) {
+    if (!realDate && !theoreticalMmDd)
+        return '';
+    if (realDate) {
+        const theoretical = theoreticalMmDd ? formatMmDd(theoreticalMmDd) : null;
+        const realFormatted = new Date(realDate).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
+        const hint = theoretical && realDate.substring(5) !== theoreticalMmDd
+            ? ` <span class="theoretical-date">(théorique : ${theoretical})</span>`
+            : '';
+        return `<span>${icon} ${label}: ${realFormatted}${hint}</span>`;
+    }
+    // No real date but itinerary provides a theoretical date
+    return `<span class="theoretical-only">${icon} ${label}: <span class="theoretical-date">${formatMmDd(theoreticalMmDd)}</span> (théorique)</span>`;
+}
+/** Format a MM-DD string to a short human-readable date (e.g. "03-15" → "15 mars") */
+function formatMmDd(mmdd) {
+    const d = new Date(`2001-${mmdd}`);
+    return d.toLocaleDateString('fr-FR', { month: 'short', day: 'numeric' });
 }
 async function renderTrackingGrid() {
     if (!state.layout)
@@ -151,6 +174,11 @@ async function openInstanceModal(id) {
           <label>Statut
             <select name="status">${statusOptions}</select>
           </label>
+          <label>Date de début réelle
+            <input name="start_date" type="date" value="${instance?.start_date ?? ''}"
+                   title="Date de début effective (les autres dates seront calculées automatiquement)">
+            <small>Les dates réelles sont calculées automatiquement d'après l'itinéraire.</small>
+          </label>
           <label>Date de semis réel
             <input name="real_sowing_date" type="date" value="${instance?.real_sowing_date ?? ''}">
           </label>
@@ -175,7 +203,32 @@ async function openInstanceModal(id) {
     </div>
   `;
     document.getElementById('btn-modal-cancel').addEventListener('click', closeModal);
+    // When itinerary or start_date changes, preview the calculated dates client-side
     const form = document.getElementById('instance-form');
+    const pathSelect = form.querySelector('[name="crop_path_id"]');
+    const startInput = form.querySelector('[name="start_date"]');
+    const previewDates = () => {
+        const pathId = Number(pathSelect.value);
+        const startDate = startInput.value;
+        if (!pathId || !startDate)
+            return;
+        const path = state.paths.find((p) => p.id === pathId);
+        if (!path)
+            return;
+        const calculated = calcDatesFromStart(path, startDate);
+        const fill = (name, val) => {
+            const el = form.querySelector(`[name="${name}"]`);
+            if (el && !el.value) {
+                el.value = val ?? '';
+            }
+        };
+        fill('real_sowing_date', calculated.real_sowing_date);
+        fill('real_transplant_date', calculated.real_transplant_date);
+        fill('real_planting_date', calculated.real_planting_date);
+        fill('real_harvest_date', calculated.real_harvest_date);
+    };
+    pathSelect.addEventListener('change', previewDates);
+    startInput.addEventListener('change', previewDates);
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
         const fd = new FormData(form);
@@ -198,6 +251,37 @@ async function openInstanceModal(id) {
             alert('Erreur : ' + err.message);
         }
     });
+}
+/**
+ * Client-side preview: compute real dates from an itinerary and a start date.
+ * Mirrors the server-side logic in CropInstancesController::applyStartDate().
+ */
+function calcDatesFromStart(path, startDateStr) {
+    const startDate = new Date(startDateStr);
+    const year = startDate.getFullYear();
+    const addDays = (d, days) => {
+        const r = new Date(d);
+        r.setDate(r.getDate() + days);
+        return r;
+    };
+    const toIso = (d) => d.toISOString().substring(0, 10);
+    let offsetDays = 0;
+    if (path.sowing_date) {
+        const anchor = new Date(`${year}-${path.sowing_date}`);
+        offsetDays = Math.round((startDate.getTime() - anchor.getTime()) / 86400000);
+    }
+    const calcDate = (mmdd) => {
+        if (!mmdd)
+            return null;
+        const base = new Date(`${year}-${mmdd}`);
+        return toIso(addDays(base, offsetDays));
+    };
+    return {
+        real_sowing_date: calcDate(path.sowing_date),
+        real_transplant_date: calcDate(path.transplant_date),
+        real_planting_date: calcDate(path.planting_date),
+        real_harvest_date: calcDate(path.harvest_date),
+    };
 }
 function closeModal() {
     const modal = document.getElementById('instance-modal');
