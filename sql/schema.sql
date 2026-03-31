@@ -34,19 +34,17 @@ CREATE TABLE crop_paths (
     id                  SERIAL PRIMARY KEY,
     species_id          INTEGER NOT NULL REFERENCES species(id) ON DELETE CASCADE,
     name                VARCHAR(150) NOT NULL,
-    sowing_date         DATE,
+    sowing_date         VARCHAR(5),       -- MM-DD (year-agnostic)
     sowing_condition    sowing_condition DEFAULT 'pleine_terre',
-    transplant_date     DATE,
-    planting_date       DATE,
-    harvest_date        DATE,
+    transplant_date     VARCHAR(5),       -- MM-DD (year-agnostic)
+    planting_date       VARCHAR(5),       -- MM-DD (year-agnostic)
+    harvest_date        VARCHAR(5),       -- MM-DD (year-agnostic)
     notes               TEXT,
     created_at          TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at          TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
 CREATE INDEX idx_crop_paths_species ON crop_paths(species_id);
-CREATE INDEX idx_crop_paths_sowing  ON crop_paths(sowing_date);
-CREATE INDEX idx_crop_paths_harvest ON crop_paths(harvest_date);
 
 -- ============================================================
 -- Table : grid_layout (configurations du terrain)
@@ -101,16 +99,17 @@ CREATE TYPE crop_status AS ENUM (
 );
 
 CREATE TABLE crop_instances (
-    id                  SERIAL PRIMARY KEY,
-    crop_path_id        INTEGER NOT NULL REFERENCES crop_paths(id) ON DELETE CASCADE,
-    status              crop_status NOT NULL DEFAULT 'planifie',
-    real_sowing_date    DATE,
+    id                   SERIAL PRIMARY KEY,
+    crop_path_id         INTEGER NOT NULL REFERENCES crop_paths(id) ON DELETE CASCADE,
+    status               crop_status NOT NULL DEFAULT 'planifie',
+    start_date           DATE,           -- actual start date chosen when creating from itinerary
+    real_sowing_date     DATE,
     real_transplant_date DATE,
-    real_planting_date  DATE,
-    real_harvest_date   DATE,
-    notes               TEXT,
-    created_at          TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at          TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    real_planting_date   DATE,
+    real_harvest_date    DATE,
+    notes                TEXT,
+    created_at           TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at           TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
 CREATE INDEX idx_crop_instances_path   ON crop_instances(crop_path_id);

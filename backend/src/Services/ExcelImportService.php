@@ -147,17 +147,17 @@ class ExcelImportService
         if (is_numeric($value)) {
             try {
                 $date = SpreadsheetDate::excelToDateTimeObject((float) $value);
-                return $date->format('Y-m-d');
+                return $date->format('m-d');
             } catch (\Throwable) {
                 return null;
             }
         }
         // Try to parse string date – unambiguous ISO format is preferred
-        $formats = ['Y-m-d', 'd/m/Y', 'd-m-Y'];
+        $formats = ['Y-m-d', 'd/m/Y', 'd-m-Y', 'm-d'];
         foreach ($formats as $format) {
             $dt = \DateTime::createFromFormat($format, trim((string) $value));
             if ($dt !== false) {
-                return $dt->format('Y-m-d');
+                return $dt->format('m-d');
             }
         }
         return null;
