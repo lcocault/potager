@@ -227,7 +227,21 @@ async function openInstanceModal(id) {
         fill('real_planting_date', calculated.real_planting_date);
         fill('real_harvest_date', calculated.real_harvest_date);
     };
-    pathSelect.addEventListener('change', previewDates);
+    pathSelect.addEventListener('change', () => {
+        // On itinerary selection, initialize start_date from the itinerary's sowing date
+        // (current year) when no start date has been entered yet.
+        if (!startInput.value) {
+            const path = state.paths.find((p) => p.id === Number(pathSelect.value));
+            if (path) {
+                const currentYear = new Date().getFullYear();
+                const anchorMmDd = path.sowing_date ?? path.transplant_date ?? path.planting_date ?? path.harvest_date;
+                if (anchorMmDd) {
+                    startInput.value = `${currentYear}-${anchorMmDd}`;
+                }
+            }
+        }
+        previewDates();
+    });
     startInput.addEventListener('change', previewDates);
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
