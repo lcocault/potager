@@ -2,6 +2,15 @@
 // Tracking module – Real cultivation execution tracking
 // ============================================================
 import { cropInstancesApi, cropPathsApi, gridApi, } from './api.js';
+const CELL_TYPE_COLORS = {
+    vide: '#f5f5f5',
+    carre_potager: '#4caf50',
+    pleine_terre: '#8d6e63',
+    allee: '#bdbdbd',
+    bati: '#607d8b',
+    non_cultivable: '#9e9e9e',
+    vegetation: '#2e7d32',
+};
 const STATUS_LABELS = {
     planifie: '📋 Planifié',
     en_cours: '🌱 En cours',
@@ -155,6 +164,8 @@ async function openInstanceModal(id) {
     if (id !== null) {
         instance = await cropInstancesApi.get(id);
     }
+    // Collect currently assigned cell IDs (pre-populated from the instance)
+    const selectedCells = new Set((instance?.cells ?? []).map((c) => c.id));
     const modal = document.getElementById('instance-modal');
     modal.classList.remove('hidden');
     const pathOptions = state.paths
@@ -163,9 +174,25 @@ async function openInstanceModal(id) {
     const statusOptions = Object.entries(STATUS_LABELS)
         .map(([v, l]) => `<option value="${v}" ${instance?.status === v ? 'selected' : ''}>${l}</option>`)
         .join('');
+    const hasCells = state.layout && (state.layout.cells ?? []).length > 0;
+    const cellSectionHtml = state.layout
+        ? `<div class="cell-assignment-section">
+         <span class="cell-assignment-label">Cellules affectées au plan</span>
+         ${hasCells
+            ? `<small class="cell-assignment-hint">Cliquez ou glissez sur les cellules pour les affecter à cette culture.</small>
+              <div class="cell-selection-canvas-wrapper">
+                <canvas id="cell-selection-canvas"></canvas>
+              </div>
+              <small id="cell-selection-count" class="cell-selection-count">${selectedCells.size} cellule(s) sélectionnée(s)</small>`
+            : `<small class="cell-assignment-hint">Le plan ne contient pas encore de cellules. Dessinez d'abord votre terrain dans l'onglet "Plan du terrain".</small>`}
+       </div>`
+        : `<div class="cell-assignment-section">
+         <span class="cell-assignment-label">Cellules affectées au plan</span>
+         <small class="cell-assignment-hint">Aucun plan disponible. Créez d'abord un plan dans l'onglet "Plan du terrain".</small>
+       </div>`;
     modal.innerHTML = `
     <div class="modal-overlay">
-      <div class="modal-box">
+      <div class="modal-box modal-box-wide">
         <h3>${instance ? 'Modifier' : 'Nouvelle'} culture</h3>
         <form id="instance-form">
           <label>Itinéraire *
@@ -194,6 +221,7 @@ async function openInstanceModal(id) {
           <label>Notes
             <textarea name="notes">${escHtml(instance?.notes ?? '')}</textarea>
           </label>
+          ${cellSectionHtml}
           <div class="form-actions">
             <button type="submit" class="btn btn-primary">${instance ? 'Enregistrer' : 'Créer'}</button>
             <button type="button" id="btn-modal-cancel" class="btn btn-secondary">Annuler</button>
@@ -203,6 +231,11 @@ async function openInstanceModal(id) {
     </div>
   `;
     document.getElementById('btn-modal-cancel').addEventListener('click', closeModal);
+    // Initialize interactive cell selector if a layout with cells is available
+    if (hasCells) {
+        const cellCanvas = document.getElementById('cell-selection-canvas');
+        initCellSelector(state.layout, selectedCells, cellCanvas);
+    }
     // When itinerary or start_date changes, preview the calculated dates client-side
     const form = document.getElementById('instance-form');
     const pathSelect = form.querySelector('[name="crop_path_id"]');
@@ -262,6 +295,7 @@ async function openInstanceModal(id) {
         const fd = new FormData(form);
         const data = {};
         fd.forEach((v, k) => { data[k] = v.toString() || null; });
+        data['cell_ids'] = Array.from(selectedCells);
         try {
             if (instance) {
                 const updated = await cropInstancesApi.update(instance.id, data);
@@ -315,6 +349,94 @@ function closeModal() {
     const modal = document.getElementById('instance-modal');
     modal.classList.add('hidden');
     modal.innerHTML = '';
+}
+/**
+ * Initialise the interactive cell-selection canvas inside the instance modal.
+ * The caller passes a mutable `selectedCells` Set; this function modifies it
+ * in place as the user clicks/drags cells, and triggers a redraw + count update.
+ */
+function initCellSelector(layout, selectedCells, canvas) {
+    // Adaptive cell size: fill the available modal width (≈650 px minus padding)
+    const CELL = Math.max(14, Math.min(22, Math.floor(618 / layout.cols)));
+    canvas.width = layout.cols * CELL;
+    canvas.height = layout.rows * CELL;
+    canvas.style.cursor = 'crosshair';
+    // Build lookup map keyed by "col,row"
+    const cellByPos = new Map();
+    (layout.cells ?? []).forEach((c) => {
+        cellByPos.set(`${c.col},${c.row}`, c);
+    });
+    drawCellSelector(canvas, layout, cellByPos, selectedCells, CELL);
+    let isDragging = false;
+    let dragMode = 'select';
+    const getCellAt = (e) => {
+        const rect = canvas.getBoundingClientRect();
+        const col = Math.floor((e.clientX - rect.left) / CELL);
+        const row = Math.floor((e.clientY - rect.top) / CELL);
+        return cellByPos.get(`${col},${row}`) ?? null;
+    };
+    const applyDrag = (cell) => {
+        const alreadySelected = selectedCells.has(cell.id);
+        if (dragMode === 'select' && !alreadySelected) {
+            selectedCells.add(cell.id);
+        }
+        else if (dragMode === 'deselect' && alreadySelected) {
+            selectedCells.delete(cell.id);
+        }
+        else {
+            return; // no change needed – skip redraw
+        }
+        drawCellSelector(canvas, layout, cellByPos, selectedCells, CELL);
+        const countEl = document.getElementById('cell-selection-count');
+        if (countEl)
+            countEl.textContent = `${selectedCells.size} cellule(s) sélectionnée(s)`;
+    };
+    canvas.addEventListener('mousedown', (e) => {
+        isDragging = true;
+        const cell = getCellAt(e);
+        if (cell) {
+            dragMode = selectedCells.has(cell.id) ? 'deselect' : 'select';
+            applyDrag(cell);
+        }
+    });
+    canvas.addEventListener('mousemove', (e) => {
+        if (!isDragging)
+            return;
+        const cell = getCellAt(e);
+        if (cell)
+            applyDrag(cell);
+    });
+    canvas.addEventListener('mouseup', () => { isDragging = false; });
+    canvas.addEventListener('mouseleave', () => { isDragging = false; });
+}
+/**
+ * Redraw the cell-selection canvas.
+ * Selected cells are highlighted with an amber overlay and bold border.
+ */
+function drawCellSelector(canvas, layout, cellByPos, selectedCells, cellSize) {
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    for (let row = 0; row < layout.rows; row++) {
+        for (let col = 0; col < layout.cols; col++) {
+            const cell = cellByPos.get(`${col},${row}`);
+            const isSelected = cell ? selectedCells.has(cell.id) : false;
+            const baseColor = cell ? (CELL_TYPE_COLORS[cell.type] ?? '#f5f5f5') : '#f0f0f0';
+            ctx.fillStyle = baseColor;
+            ctx.fillRect(col * cellSize, row * cellSize, cellSize, cellSize);
+            if (isSelected) {
+                ctx.fillStyle = 'rgba(255,193,7,0.55)';
+                ctx.fillRect(col * cellSize, row * cellSize, cellSize, cellSize);
+                ctx.strokeStyle = '#e65100';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(col * cellSize + 1, row * cellSize + 1, cellSize - 2, cellSize - 2);
+            }
+            else {
+                ctx.strokeStyle = 'rgba(0,0,0,0.1)';
+                ctx.lineWidth = 1;
+                ctx.strokeRect(col * cellSize, row * cellSize, cellSize, cellSize);
+            }
+        }
+    }
 }
 async function deleteInstance(id) {
     if (!confirm('Supprimer cette culture ?'))
