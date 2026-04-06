@@ -72,11 +72,23 @@ class CropInstancesController
     /** PUT /api/crop-instances/{id} */
     public function update(Request $request, array $params): never
     {
-        $data = $request->getBody();
-        if ($this->model->findById((int) $params['id']) === null) {
+        $data     = $request->getBody();
+        $existing = $this->model->findById((int) $params['id']);
+        if ($existing === null) {
             Response::notFound('Crop instance not found');
         }
         $this->validateStatus($data['status'] ?? 'planifie');
+
+        // If a start_date is provided and the individual real dates are not set,
+        // auto-calculate them from the itinerary's MM-DD offsets.
+        if (!empty($data['start_date'])) {
+            $pathId = $data['crop_path_id'] ?? $existing['crop_path_id'];
+            $path   = $this->pathModel->findById((int) $pathId);
+            if ($path !== null) {
+                $data = $this->applyStartDate($data, $path);
+            }
+        }
+
         $this->model->update((int) $params['id'], $data);
         if (isset($data['cell_ids']) && is_array($data['cell_ids'])) {
             $this->model->assignCells((int) $params['id'], array_map('intval', $data['cell_ids']));

@@ -243,6 +243,20 @@ async function openInstanceModal(id) {
         previewDates();
     });
     startInput.addEventListener('change', previewDates);
+    // Trigger initial date preview when the modal first opens.
+    // If no start_date is set yet (new instance or instance without a start date),
+    // auto-fill it from the currently selected itinerary before previewing.
+    if (!startInput.value && pathSelect.value) {
+        const path = state.paths.find((p) => p.id === Number(pathSelect.value));
+        if (path) {
+            const currentYear = new Date().getFullYear();
+            const anchorMmDd = path.sowing_date ?? path.transplant_date ?? path.planting_date ?? path.harvest_date;
+            if (anchorMmDd) {
+                startInput.value = `${currentYear}-${anchorMmDd}`;
+            }
+        }
+    }
+    previewDates();
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
         const fd = new FormData(form);
