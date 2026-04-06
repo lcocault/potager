@@ -4,17 +4,8 @@
 import {
   cropInstancesApi, cropPathsApi, gridApi,
   CropInstance, CropPath, GridLayout, GridCell, CropStatus,
+  CELL_TYPE_COLORS,
 } from './api.js';
-
-const CELL_TYPE_COLORS: Record<string, string> = {
-  vide:           '#f5f5f5',
-  carre_potager:  '#4caf50',
-  pleine_terre:   '#8d6e63',
-  allee:          '#bdbdbd',
-  bati:           '#607d8b',
-  non_cultivable: '#9e9e9e',
-  vegetation:     '#2e7d32',
-};
 
 const STATUS_LABELS: Record<CropStatus, string> = {
   planifie:  '📋 Planifié',
@@ -421,8 +412,13 @@ function initCellSelector(
   selectedCells: Set<number>,
   canvas: HTMLCanvasElement,
 ): void {
-  // Adaptive cell size: fill the available modal width (≈650 px minus padding)
-  const CELL = Math.max(14, Math.min(22, Math.floor(618 / layout.cols)));
+  // Adaptive cell size: fill the available width inside the modal content area.
+  // The modal uses max-width:720px with 2×2rem (64px) padding, leaving ≈654px;
+  // subtract a small scrollbar allowance to get MODAL_CONTENT_WIDTH.
+  const MIN_CELL_SIZE      = 14;
+  const MAX_CELL_SIZE      = 22;
+  const MODAL_CONTENT_WIDTH = 618;
+  const CELL = Math.max(MIN_CELL_SIZE, Math.min(MAX_CELL_SIZE, Math.floor(MODAL_CONTENT_WIDTH / layout.cols)));
   canvas.width  = layout.cols * CELL;
   canvas.height = layout.rows * CELL;
   canvas.style.cursor = 'crosshair';

@@ -1,16 +1,16 @@
 // ============================================================
 // Grid editor module – Interactive 2D garden planner
 // ============================================================
-import { gridApi, GridLayout, GridCell, CellType } from './api.js';
+import { gridApi, GridLayout, GridCell, CellType, CELL_TYPE_COLORS } from './api.js';
 
-const CELL_TYPES: { type: CellType; label: string; color: string }[] = [
-  { type: 'vide',          label: 'Vide',             color: '#f5f5f5' },
-  { type: 'carre_potager', label: 'Carré potager',    color: '#4caf50' },
-  { type: 'pleine_terre',  label: 'Pleine terre',     color: '#8d6e63' },
-  { type: 'allee',         label: 'Allée',             color: '#bdbdbd' },
-  { type: 'bati',          label: 'Bâti',              color: '#607d8b' },
-  { type: 'non_cultivable',label: 'Non cultivable',   color: '#9e9e9e' },
-  { type: 'vegetation',    label: 'Végétation',        color: '#2e7d32' },
+const CELL_TYPES: { type: CellType; label: string }[] = [
+  { type: 'vide',          label: 'Vide'            },
+  { type: 'carre_potager', label: 'Carré potager'   },
+  { type: 'pleine_terre',  label: 'Pleine terre'    },
+  { type: 'allee',         label: 'Allée'            },
+  { type: 'bati',          label: 'Bâti'             },
+  { type: 'non_cultivable',label: 'Non cultivable'  },
+  { type: 'vegetation',    label: 'Végétation'       },
 ];
 
 type CellMap = Map<string, Partial<GridCell>>;
@@ -59,14 +59,17 @@ export async function initGrid(container: HTMLElement): Promise<void> {
 
 function renderLegend(): void {
   const legend = document.getElementById('grid-legend')!;
-  legend.innerHTML = CELL_TYPES.map((ct) => `
-    <div class="legend-item ${state.selectedType === ct.type ? 'active' : ''}"
-         data-type="${ct.type}"
-         style="--cell-color:${ct.color}">
-      <span class="legend-swatch" style="background:${ct.color}"></span>
-      ${ct.label}
-    </div>
-  `).join('');
+  legend.innerHTML = CELL_TYPES.map((ct) => {
+    const color = CELL_TYPE_COLORS[ct.type] ?? '#f5f5f5';
+    return `
+      <div class="legend-item ${state.selectedType === ct.type ? 'active' : ''}"
+           data-type="${ct.type}"
+           style="--cell-color:${color}">
+        <span class="legend-swatch" style="background:${color}"></span>
+        ${ct.label}
+      </div>
+    `;
+  }).join('');
   legend.querySelectorAll<HTMLDivElement>('.legend-item').forEach((el) => {
     el.addEventListener('click', () => {
       state.selectedType = el.dataset.type as CellType;
@@ -164,7 +167,7 @@ function drawGrid(canvas?: HTMLCanvasElement): void {
 }
 
 function getCellColor(type: CellType): string {
-  return CELL_TYPES.find((ct) => ct.type === type)?.color ?? '#f5f5f5';
+  return CELL_TYPE_COLORS[type] ?? '#f5f5f5';
 }
 
 function getCanvasCell(canvas: HTMLCanvasElement, e: MouseEvent, cellSize: number): { col: number; row: number } {

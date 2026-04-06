@@ -2,6 +2,16 @@
 // API Client - Central HTTP communication layer
 // ============================================================
 export const API_BASE = window.API_BASE ?? '/api';
+/** Canonical fill colours for each grid cell type, shared across modules. */
+export const CELL_TYPE_COLORS = {
+    vide: '#f5f5f5',
+    carre_potager: '#4caf50',
+    pleine_terre: '#8d6e63',
+    allee: '#bdbdbd',
+    bati: '#607d8b',
+    non_cultivable: '#9e9e9e',
+    vegetation: '#2e7d32',
+};
 async function request(url, options = {}) {
     const res = await fetch(url, {
         headers: { 'Content-Type': 'application/json', ...options.headers },
