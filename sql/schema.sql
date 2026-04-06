@@ -107,6 +107,10 @@ CREATE TABLE crop_instances (
     real_transplant_date DATE,
     real_planting_date   DATE,
     real_harvest_date    DATE,
+    nb_sowed             INTEGER,        -- number of plants sown
+    nb_transplanted      INTEGER,        -- number of plants transplanted
+    nb_planted           INTEGER,        -- number of plants put in the ground
+    nb_harvested         INTEGER,        -- number of plants harvested
     notes                TEXT,
     created_at           TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at           TIMESTAMP WITH TIME ZONE DEFAULT NOW()

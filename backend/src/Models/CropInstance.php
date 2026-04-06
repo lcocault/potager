@@ -83,9 +83,9 @@ class CropInstance
     {
         $stmt = $this->db->prepare(
             'INSERT INTO crop_instances
-                (crop_path_id, status, start_date, real_sowing_date, real_transplant_date, real_planting_date, real_harvest_date, notes)
+                (crop_path_id, status, start_date, real_sowing_date, real_transplant_date, real_planting_date, real_harvest_date, nb_sowed, nb_transplanted, nb_planted, nb_harvested, notes)
              VALUES
-                (:crop_path_id, :status, :start_date, :real_sowing_date, :real_transplant_date, :real_planting_date, :real_harvest_date, :notes)
+                (:crop_path_id, :status, :start_date, :real_sowing_date, :real_transplant_date, :real_planting_date, :real_harvest_date, :nb_sowed, :nb_transplanted, :nb_planted, :nb_harvested, :notes)
              RETURNING id'
         );
         $stmt->execute([
@@ -96,6 +96,10 @@ class CropInstance
             'real_transplant_date' => $data['real_transplant_date'] ?? null,
             'real_planting_date'   => $data['real_planting_date'] ?? null,
             'real_harvest_date'    => $data['real_harvest_date'] ?? null,
+            'nb_sowed'             => $this->toNullableInt($data, 'nb_sowed'),
+            'nb_transplanted'      => $this->toNullableInt($data, 'nb_transplanted'),
+            'nb_planted'           => $this->toNullableInt($data, 'nb_planted'),
+            'nb_harvested'         => $this->toNullableInt($data, 'nb_harvested'),
             'notes'                => $data['notes'] ?? null,
         ]);
         return (int) $stmt->fetchColumn();
@@ -109,7 +113,10 @@ class CropInstance
                 status=:status, start_date=:start_date,
                 real_sowing_date=:real_sowing_date,
                 real_transplant_date=:real_transplant_date, real_planting_date=:real_planting_date,
-                real_harvest_date=:real_harvest_date, notes=:notes
+                real_harvest_date=:real_harvest_date,
+                nb_sowed=:nb_sowed, nb_transplanted=:nb_transplanted,
+                nb_planted=:nb_planted, nb_harvested=:nb_harvested,
+                notes=:notes
              WHERE id=:id'
         );
         return $stmt->execute([
@@ -120,6 +127,10 @@ class CropInstance
             'real_transplant_date' => $data['real_transplant_date'] ?? null,
             'real_planting_date'   => $data['real_planting_date'] ?? null,
             'real_harvest_date'    => $data['real_harvest_date'] ?? null,
+            'nb_sowed'             => $this->toNullableInt($data, 'nb_sowed'),
+            'nb_transplanted'      => $this->toNullableInt($data, 'nb_transplanted'),
+            'nb_planted'           => $this->toNullableInt($data, 'nb_planted'),
+            'nb_harvested'         => $this->toNullableInt($data, 'nb_harvested'),
             'notes'                => $data['notes'] ?? null,
         ]);
     }
@@ -128,6 +139,20 @@ class CropInstance
     {
         $stmt = $this->db->prepare('DELETE FROM crop_instances WHERE id = :id');
         return $stmt->execute(['id' => $id]);
+    }
+
+    /**
+     * Return the value of $data[$key] cast to int, or null if missing / blank.
+     *
+     * @param array<string,mixed> $data
+     */
+    private function toNullableInt(array $data, string $key): ?int
+    {
+        $val = $data[$key] ?? null;
+        if ($val === null || $val === '') {
+            return null;
+        }
+        return (int) $val;
     }
 
     /** @param list<int> $cellIds */

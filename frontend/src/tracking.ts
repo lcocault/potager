@@ -94,10 +94,10 @@ function renderInstances(): void {
         <span class="status-badge" style="background:${STATUS_COLORS[inst.status]}">${STATUS_LABELS[inst.status]}</span>
       </div>
       <div class="instance-dates">
-        ${renderDateRow('🌱', 'Semis',      inst.real_sowing_date,     inst.sowing_date)}
-        ${renderDateRow('🔄', 'Repiquage',  inst.real_transplant_date, inst.transplant_date)}
-        ${renderDateRow('⬇️', 'Plantation', inst.real_planting_date,   inst.planting_date)}
-        ${renderDateRow('🌾', 'Récolte',    inst.real_harvest_date,    inst.harvest_date)}
+        ${renderDateRow('🌱', 'Semis',      inst.real_sowing_date,     inst.sowing_date,     inst.nb_sowed)}
+        ${renderDateRow('🔄', 'Repiquage',  inst.real_transplant_date, inst.transplant_date, inst.nb_transplanted)}
+        ${renderDateRow('⬇️', 'Plantation', inst.real_planting_date,   inst.planting_date,   inst.nb_planted)}
+        ${renderDateRow('🌾', 'Récolte',    inst.real_harvest_date,    inst.harvest_date,    inst.nb_harvested)}
       </div>
       <div class="instance-actions">
         <button class="btn-icon btn-edit-instance" data-id="${inst.id}" title="Modifier">✏️</button>
@@ -117,14 +117,18 @@ function renderInstances(): void {
 /**
  * Render a single date row showing the real date and the theoretical MM-DD alongside.
  * If the real date differs from what the itinerary predicted, both are shown.
+ * An optional plant count is appended when provided.
  */
 function renderDateRow(
   icon: string,
   label: string,
   realDate: string | null,
-  theoreticalMmDd: string | null
+  theoreticalMmDd: string | null,
+  count: number | null = null
 ): string {
   if (!realDate && !theoreticalMmDd) return '';
+
+  const countHtml = count !== null ? ` <span class="plant-count">(${count} plant${count !== 1 ? 's' : ''})</span>` : '';
 
   if (realDate) {
     const theoretical = theoreticalMmDd ? formatMmDd(theoreticalMmDd) : null;
@@ -132,11 +136,11 @@ function renderDateRow(
     const hint = theoretical && realDate.substring(5) !== theoreticalMmDd
       ? ` <span class="theoretical-date">(théorique : ${theoretical})</span>`
       : '';
-    return `<span>${icon} ${label}: ${realFormatted}${hint}</span>`;
+    return `<span>${icon} ${label}: ${realFormatted}${hint}${countHtml}</span>`;
   }
 
   // No real date but itinerary provides a theoretical date
-  return `<span class="theoretical-only">${icon} ${label}: <span class="theoretical-date">${formatMmDd(theoreticalMmDd!)}</span> (théorique)</span>`;
+  return `<span class="theoretical-only">${icon} ${label}: <span class="theoretical-date">${formatMmDd(theoreticalMmDd!)}</span> (théorique)${countHtml}</span>`;
 }
 
 /** Format a MM-DD string to a short human-readable date (e.g. "03-15" → "15 mars") */
@@ -253,6 +257,23 @@ async function openInstanceModal(id: number | null): Promise<void> {
           <label>Date de récolte réelle
             <input name="real_harvest_date" type="date" value="${instance?.real_harvest_date ?? ''}">
           </label>
+          <fieldset class="plant-counts-fieldset">
+            <legend>Nombre de plants</legend>
+            <div class="plant-counts-grid">
+              <label>🌱 Semés
+                <input name="nb_sowed" type="number" min="0" step="1" value="${instance?.nb_sowed ?? ''}">
+              </label>
+              <label>🔄 Repiqués
+                <input name="nb_transplanted" type="number" min="0" step="1" value="${instance?.nb_transplanted ?? ''}">
+              </label>
+              <label>⬇️ Mis en terre
+                <input name="nb_planted" type="number" min="0" step="1" value="${instance?.nb_planted ?? ''}">
+              </label>
+              <label>🌾 Récoltés
+                <input name="nb_harvested" type="number" min="0" step="1" value="${instance?.nb_harvested ?? ''}">
+              </label>
+            </div>
+          </fieldset>
           <label>Notes
             <textarea name="notes">${escHtml(instance?.notes ?? '')}</textarea>
           </label>

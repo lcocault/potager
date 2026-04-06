@@ -47,6 +47,11 @@ export interface CropInstance {
   real_transplant_date: string | null;
   real_planting_date: string | null;
   real_harvest_date: string | null;
+  /** Number of plants at each stage */
+  nb_sowed: number | null;
+  nb_transplanted: number | null;
+  nb_planted: number | null;
+  nb_harvested: number | null;
   /** Theoretical dates from the linked crop path (MM-DD format) */
   sowing_date: string | null;
   transplant_date: string | null;

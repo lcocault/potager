@@ -453,6 +453,32 @@ textarea { resize: vertical; min-height: 80px; }
   gap:             0.25rem;
 }
 
+.plant-count {
+  font-weight: 500;
+  color:       var(--primary);
+}
+
+/* ── Plant counts fieldset (crop instance modal) ─────────── */
+.plant-counts-fieldset {
+  border:        1px solid var(--border);
+  border-radius: var(--radius);
+  padding:       0.75rem 1rem;
+  margin-bottom: 1rem;
+}
+
+.plant-counts-fieldset legend {
+  font-weight: 500;
+  font-size:   0.9rem;
+  color:       var(--text);
+  padding:     0 0.3rem;
+}
+
+.plant-counts-grid {
+  display:               grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap:                   0.5rem 1rem;
+}
+
 .tracking-grid-wrapper {
   flex:           1;
   min-width:      300px;
